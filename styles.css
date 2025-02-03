@@ -1,0 +1,87 @@
+body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    margin: 0;
+    background: black;
+}
+
+input {
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+button {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #218838;
+}
+
+.standings {
+    background-image: repeating-linear-gradient(180deg, #3c3c3c 0px, #3c3c3c 90px, black 90px, black 180px);
+}
+
+.rank-box {
+    position: relative;
+    top: 0px;
+    display: flex;
+    align-items: center;
+    height: 90px;
+    gap: 20px;
+    padding: 0px 20px;
+    background: transparent;
+}
+
+.rank {
+    font-size: 1.5rem;
+    width: 30px;
+    text-align: center;
+    color: white;
+}
+
+.user-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.handle {
+    font-size: 1.5rem;
+    color: white;
+}
+
+.problem-points {
+    display: flex;
+    gap: 5px;
+    width: 100%;
+}
+
+.point-box {
+    flex: 1;
+    text-align: center;
+    background-color: #282828;
+    color: white;
+    padding: 5px;
+    border-radius: 5px;
+    border-style: solid;
+    border-color: transparent;
+}
+
+.total-score {
+    font-size: 1.5rem;
+    color: white;
+    width: 50px;
+    text-align: center;
+}
+
+.total-time {
+    font-size: 1.5rem;
+    color: white;
+    width: 100px;
+    text-align: center;
+}

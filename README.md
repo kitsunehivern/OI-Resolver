@@ -1,1 +1,1 @@
-# CodeforcesResolver
+# OI Resolver
