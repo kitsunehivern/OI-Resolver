@@ -62,7 +62,7 @@ async function fetchAPI(method, params, apiKey, apiSecret) {
         url += `&apiKey=${apiKey}&time=${time}&apiSig=${rand}${hash}`;
     }
 
-    console.log("Fetching", url);
+    // console.log("Fetching", url);
 
     const response = await fetch(url);
     if (!response.ok) {
@@ -75,7 +75,7 @@ async function fetchAPI(method, params, apiKey, apiSecret) {
         throw new Error(`Codeforces API error: ${comment}`);
     }
 
-    console.log("Fetched", result);
+    // console.log("Fetched", result);
 
     return result;
 }
@@ -94,10 +94,10 @@ async function fetchContest() {
         return;
     }
 
-    document.getElementById("contestId").style.display = "none";
-    document.getElementById("apiKey").style.display = "none";
-    document.getElementById("apiSecret").style.display = "none";
-    document.getElementById("submit").style.display = "none";
+    document.getElementById("title").style.display = "none";
+    document.getElementById("input-container").style.display = "none";
+    document.getElementById("header").style.display = "flex";
+    document.getElementById("standings").style.display = "block";
 
     const { contest, problems, rows } = await fetchAPI('contest.standings', [{ contestId }, { asManager: true }], apiKey, apiSecret);
     let submissions = await fetchAPI('contest.status', [{ contestId }, { asManager: true }], apiKey, apiSecret);
@@ -274,11 +274,14 @@ document.addEventListener("keydown", function (event) {
 
     if (event.key == 'n') {
         processDone = false;
+
+        const scrollToBox = document.querySelectorAll(`.rank-box`)[Math.min(currentIndex + 1, standings.length - 1)];
+        scrollToBox.scrollIntoView({ behavior: "smooth", block: "end" });
+
         if (currentAction == 0) {
             if (currentIndex < standings.length - 1) {
                 const previousBox = document.querySelectorAll(`.rank-box`)[currentIndex + 1];
                 previousBox.style.background = "transparent";
-                previousBox.scrollIntoView({ behavior: "smooth", block: "end" });
             }
 
             if (currentIndex == -1) {
@@ -288,9 +291,6 @@ document.addEventListener("keydown", function (event) {
             const unfrozenIndex = standings[currentIndex].problems.findIndex(problem => problem.afterFreeze);
             const currentBox = document.querySelectorAll(`.rank-box`)[currentIndex];
             currentBox.style.background = "#5782d9";
-            if (currentIndex == standings.length - 1) {
-                currentBox.scrollIntoView({ behavior: "smooth", block: "end" });
-            }
 
             if (unfrozenIndex == -1) {
                 currentIndex--;

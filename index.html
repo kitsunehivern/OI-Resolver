@@ -4,16 +4,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Codeforces Resolver</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="script.js"></script>
+    <title>OI Resolver</title>
+    <link rel="stylesheet" href="src/styles.css">
+    <script src="src/script.js"></script>
 </head>
 
 <body>
-    <input type="text" id="contestId" placeholder="Enter Contest ID">
-    <input type="text" id="apiKey" placeholder="Enter API Key">
-    <input type="text" id="apiSecret" placeholder="Enter API Secret">
-    <button id="submit" onclick="fetchContest()">Get contest</button>
+    <h1 id="title" class="title">OI Resolver</h1>
+    <div id="input-container" class="input-container">
+        <input type="text" id="contestId" placeholder="Enter Contest ID">
+        <input type="text" id="apiKey" placeholder="Enter API Key">
+        <input type="text" id="apiSecret" placeholder="Enter API Secret">
+        <button id="submit" onclick="fetchContest()">Submit</button>
+    </div>
+    <div id="header" class="header">
+        <div class="header-rank">Rank</div>
+        <div class="header-name">Name</div>
+        <div class="header-score">Score</div>
+        <div class="header-time">Time</div>
+    </div>
     <div id="standings" class="standings"></div>
 </body>
 
