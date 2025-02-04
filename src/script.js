@@ -99,8 +99,8 @@ async function fetchContest() {
     document.getElementById("header").style.display = "flex";
     document.getElementById("standings").style.display = "block";
 
-    const { contest, problems, rows } = await fetchAPI('contest.standings', [{ contestId }, { asManager: true }], apiKey, apiSecret);
-    let submissions = await fetchAPI('contest.status', [{ contestId }, { asManager: true }], apiKey, apiSecret);
+    const { contest, problems, rows } = await fetchAPI('contest.standings', [{ contestId }], apiKey, apiSecret);
+    let submissions = await fetchAPI('contest.status', [{ contestId }], apiKey, apiSecret);
     submissions = submissions.filter(submission => submission.author.participantType == "CONTESTANT");
 
     problems.forEach((problem, index) => {
@@ -121,6 +121,9 @@ async function fetchContest() {
             }
 
             for (const submission of userProblemSubmissions) {
+                if (!submission.points) {
+                    submission.points = submission.verdict == "OK" ? 100 : 0;
+                }
                 if (!contest.freezeDurationSeconds || submission.relativeTimeSeconds < contest.durationSeconds - contest.freezeDurationSeconds) {
                     if (data.beforeFreeze == null) {
                         if (submission.points > 0) {
