@@ -99,8 +99,8 @@ async function fetchContest() {
     document.getElementById("header").style.display = "flex";
     document.getElementById("standings").style.display = "block";
 
-    const { contest, problems, rows } = await fetchAPI('contest.standings', [{ contestId }], apiKey, apiSecret);
-    let submissions = await fetchAPI('contest.status', [{ contestId }], apiKey, apiSecret);
+    const { contest, problems, rows } = await fetchAPI('contest.standings', [{ contestId }, { asManager: true }], apiKey, apiSecret);
+    let submissions = await fetchAPI('contest.status', [{ contestId }, { asManager: true }], apiKey, apiSecret);
     submissions = submissions.filter(submission => submission.author.participantType == "CONTESTANT");
 
     problems.forEach((problem, index) => {
