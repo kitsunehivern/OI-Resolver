@@ -5,9 +5,19 @@ html {
 }
 
 body {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-family: "Nimbus Sans", "Helvetica", "Arial", sans-serif;
     background: black;
     margin: 0px;
+}
+
+::-webkit-scrollbar {
+    display: none;
+}
+
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 
 .title {
@@ -15,17 +25,28 @@ body {
     text-align: center;
 }
 
-.input-container {
+.form-container {
     display: flex;
     flex-direction: column;
     justify-content: center;
     gap: 10px;
-    border-radius: 5px;
     margin: 0px auto;
-    max-width: 500px;
+    max-width: 600px;
+    width: 100%;
 }
 
-.input-group {
+.input-container {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    width: 100%;
+}
+
+.input-container>* {
+    flex-grow: 1;
+}
+
+.form-component {
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -37,9 +58,53 @@ label {
     font-size: 0.8rem;
 }
 
-input {
+a {
+    color: white;
+}
+
+select {
+    background: white;
     padding: 10px;
     border-radius: 5px;
+    cursor: pointer;
+}
+
+input {
+    background: white;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+textarea {
+    resize: none;
+    background: white;
+    padding: 10px;
+    border-radius: 5px;
+    height: 300px;
+}
+
+.input-file::-webkit-file-upload-button {
+    display: none;
+}
+
+.input-file {
+    font-weight: bold;
+    color: black;
+    border-radius: 5px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background: white;
+}
+
+.input-file:hover {
+    background: #ddd;
+}
+
+.input-file input {
+    display: none;
 }
 
 button {
@@ -66,10 +131,11 @@ button:hover {
     padding: 0px 20px;
     z-index: 1;
     border-bottom: 1px solid white;
+    height: 24px;
 }
 
 .header-rank {
-    width: 50px;
+    width: 40px;
     text-align: center;
     color: white;
 }
@@ -81,13 +147,13 @@ button:hover {
 
 .header-score {
     color: white;
-    width: 50px;
+    width: 60px;
     text-align: center;
 }
 
 .header-time {
     color: white;
-    width: 100px;
+    width: 60px;
     text-align: center;
 }
 
@@ -104,7 +170,7 @@ button:hover {
 
 .standings {
     display: none;
-    background-image: repeating-linear-gradient(180deg, #3c3c3c 0px, #3c3c3c 90px, black 90px, black 180px);
+    background-image: repeating-linear-gradient(180deg, #3c3c3c 0px, #3c3c3c 70px, black 70px, black 140px);
 }
 
 .rank-box {
@@ -112,15 +178,15 @@ button:hover {
     top: 0px;
     display: flex;
     align-items: center;
-    height: 90px;
+    height: 70px;
     gap: 20px;
     padding: 0px 20px;
     background: transparent;
 }
 
 .rank {
-    font-size: 1.5rem;
-    width: 50px;
+    font-size: 1.6rem;
+    width: 40px;
     text-align: center;
     color: white;
 }
@@ -133,7 +199,7 @@ button:hover {
 }
 
 .handle {
-    font-size: 1.5rem;
+    font-size: 1.6rem;
     color: white;
 }
 
@@ -148,23 +214,22 @@ button:hover {
     text-align: center;
     background-color: #282828;
     color: white;
-    padding: 5px;
+    padding: 0px;
     border-radius: 5px;
     border-style: solid;
     border-color: transparent;
-    min-width: 100px;
 }
 
 .total-score {
-    font-size: 1.5rem;
+    font-size: 1.6rem;
     color: white;
-    width: 50px;
+    width: 60px;
     text-align: center;
 }
 
 .total-time {
-    font-size: 1.5rem;
+    font-size: 1.6rem;
     color: white;
-    width: 100px;
+    width: 60px;
     text-align: center;
 }

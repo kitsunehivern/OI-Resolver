@@ -11,20 +11,40 @@
 
 <body>
     <h1 id="title" class="title">OI Resolver</h1>
-    <div id="input-container" class="input-container">
-        <div class="input-group">
-            <label for="contestId">Contest ID</label>
-            <input type="text" id="contestId" placeholder="Enter Contest ID">
+    <div id="form" class="form-container">
+        <div class="form-component">
+            <label for="option">Option</label>
+            <select id="option" onchange="changeOption()">
+                <option value="json">Raw JSON</option>
+                <option value="codeforces">Codeforces API</option>
+            </select>
         </div>
-        <div class="input-group">
-            <label for="apiKey">API Key</label>
-            <input type="text" id="apiKey" placeholder="Enter API Key">
+        <div id="input-json" class="input-container">
+            <label class="input-file">
+                Upload a JSON file
+                <input id="file" type="file" accept="application/json" onchange="readJSON()">
+            </label>
         </div>
-        <div class="input-group">
-            <label for="apiSecret">API Secret</label>
-            <input type="text" id="apiSecret" placeholder="Enter API Secret">
+        <div id="input-codeforces" class="input-container" style="display: none;">
+            <div class="form-component">
+                <label for="contestId">Contest ID</label>
+                <input type="number" id="contestId" placeholder="Enter Contest ID" onchange="fetchContest()">
+            </div>
+            <div class="form-component">
+                <label for="apiKey"><a href="https://codeforces.com/settings/api" target="_blank">API Key</a></label>
+                <input type="text" id="apiKey" placeholder="Enter API Key" onchange="fetchContest()">
+            </div>
+            <div class="form-component">
+                <label for="apiSecret"><a href="https://codeforces.com/settings/api" target="_blank">API
+                        Secret</a></label>
+                <input type="text" id="apiSecret" placeholder="Enter API Secret" onchange="fetchContest()">
+            </div>
         </div>
-        <button id="submit" onclick="fetchContest()">Submit</button>
+        <div class=" form-component">
+            <label for="json">Contest data (JSON format)</label>
+            <textarea id="json" spellcheck="false"></textarea>
+        </div>
+        <button id="submit" onclick="processContest()">Submit</button>
     </div>
     <div id="header" class="header">
         <div class="header-rank">Rank</div>

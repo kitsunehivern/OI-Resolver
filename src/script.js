@@ -4,50 +4,65 @@ async function sha512Hash(string) {
     });
 }
 
-function secondsToDuration(seconds) {
-    const hours = Math.floor(seconds / 3600);
-    seconds %= 3600;
-    const minutes = Math.floor(seconds / 60);
-    seconds %= 60;
-    return `${hours}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-}
+function getColorForScore(score, maxScore) {
+    score = Math.max(0, Math.min(maxScore, score));
 
-const redColor = "#ad0b0b";
-const yellowColor = "#a7a70b";
-const greenColor = "#0ba70b";
+    const startColor = { r: 167, g: 11, b: 11 };
+    const midColor = { r: 167, g: 167, b: 11 };
+    const endColor = { r: 11, g: 167, b: 11 };
 
-function hexToRgb(hex) {
-    hex = hex.replace("#", "");
-    return [
-        parseInt(hex.substring(0, 2), 16),
-        parseInt(hex.substring(2, 4), 16),
-        parseInt(hex.substring(4, 6), 16)
-    ];
-}
+    let r, g, b;
+    const midPoint = maxScore / 2;
 
-function rgbToHex(rgb) {
-    return "#" + rgb.map(value => value.toString(16).padStart(2, "0")).join("");
-}
-
-function interpolateColor(color1, color2, factor) {
-    return color1.map((val, i) => Math.round(val + factor * (color2[i] - val)));
-}
-
-function getColorForScore(score) {
-    if (score <= 0) return redColor;
-    if (score >= 100) return greenColor;
-
-    const redRGB = hexToRgb(redColor);
-    const yellowRGB = hexToRgb(yellowColor);
-    const greenRGB = hexToRgb(greenColor);
-
-    if (score <= 50) {
-        const factor = score / 50;
-        return rgbToHex(interpolateColor(redRGB, yellowRGB, factor));
+    if (score <= midPoint) {
+        const ratio = score / midPoint;
+        r = Math.round(startColor.r + (midColor.r - startColor.r) * ratio);
+        g = Math.round(startColor.g + (midColor.g - startColor.g) * ratio);
+        b = Math.round(startColor.b + (midColor.b - startColor.b) * ratio);
     } else {
-        const factor = (score - 50) / 50;
-        return rgbToHex(interpolateColor(yellowRGB, greenRGB, factor));
+        const ratio = (score - midPoint) / midPoint;
+        r = Math.round(midColor.r + (endColor.r - midColor.r) * ratio);
+        g = Math.round(midColor.g + (endColor.g - midColor.g) * ratio);
+        b = Math.round(midColor.b + (endColor.b - midColor.b) * ratio);
     }
+
+    const toHex = (c) => c.toString(16).padStart(2, '0');
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function changeOption() {
+    const form = document.getElementById("form");
+    for (let i = 0; i < form.children.length; i++) {
+        const child = form.children[i];
+        if (child.id.startsWith("input-")) {
+            child.style.display = "none";
+        }
+    }
+
+    const option = document.getElementById("option").value;
+    document.getElementById(`input-${option}`).style.display = "flex";
+}
+
+function readJSON() {
+    const file = document.getElementById("file").files[0];
+    if (!file) {
+        alert("Please select a file");
+        return;
+    }
+
+    const jsonText = document.getElementById("json");
+    if (jsonText.value) {
+        if (!confirm("Are you sure you want to overwrite the current data?")) {
+            return;
+        }
+    }
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        jsonText.value = e.target.result;
+    };
+
+    reader.readAsText(file);
 }
 
 async function fetchAPI(method, params, apiKey, apiSecret) {
@@ -65,87 +80,269 @@ async function fetchAPI(method, params, apiKey, apiSecret) {
     // console.log("Fetching", url);
 
     const response = await fetch(url);
-    if (!response.ok) {
-        throw new Error(`HTTP error: ${response.status}`);
+    let { status, result, comment } = await response.json();
+    if (comment) {
+        comment = comment.split(';');
     }
 
-    const { status, result, comment } = await response.json();
+    // console.log("Fetched", { status, result, comment });
 
-    if (status != "OK") {
-        throw new Error(`Codeforces API error: ${comment}`);
-    }
-
-    // console.log("Fetched", result);
-
-    return result;
+    return { status, result, comment };
 }
 
+async function fetchContest() {
+    const contestId = document.getElementById("contestId").value.trim();
+    const apiKey = document.getElementById("apiKey").value.trim();
+    const apiSecret = document.getElementById("apiSecret").value.trim();
+
+    if (!contestId || !apiKey || !apiSecret) {
+        return;
+    }
+
+    const jsonText = document.getElementById("json");
+
+    if (jsonText.value) {
+        if (!confirm("Are you sure you want to overwrite the current data?")) {
+            return;
+        }
+    }
+
+    jsonText.value = "Fetching contest info and problems...";
+    let { status, result, comment } = await fetchAPI('contest.standings', [{ contestId }, { asManager: true }], apiKey, apiSecret);
+
+    let contest, problems;
+    if (status != "OK") {
+        jsonText.value = comment.join('\n');
+        return;
+    } else {
+        jsonText.value += " done\n";
+        ({ contest, problems } = result);
+    }
+
+    jsonText.value += "Waiting between requests...";
+    await new Promise(resolve => setTimeout(resolve, 2500)); // wait between requests
+    jsonText.value += " done\n";
+
+    jsonText.value += "Fetching contest submissions...\n";
+    ({ status, result, comment } = await fetchAPI('contest.status', [{ contestId }, { asManager: true }], apiKey, apiSecret));
+
+    let submissions;
+    if (status != "OK") {
+        jsonText.value = comment.join('\n');
+        return;
+    } else {
+        jsonText.value += " done\n";
+        submissions = result;
+    }
+
+    // Filter out submissions by participant type
+    submissions = submissions.filter(submission => submission.author.participantType == "CONTESTANT");
+
+    // Fillter out submissions by verdict
+    const verdicts = ["OK", "PARTIAL", "RUNTIME_ERROR", "WRONG_ANSWER", "PRESENTATION_ERROR", "TIME_LIMIT_EXCEEDED", "MEMORY_LIMIT_EXCEEDED", "IDLENESS_LIMIT_EXCEEDED"];
+    submissions = submissions.filter(submission => verdicts.includes(submission.verdict));
+
+    // Reverse submissions
+    submissions = submissions.reverse();
+
+    // Calculate relative time in minutes
+    submissions.forEach(submission => submission.submissionMinutes = Math.floor(submission.relativeTimeSeconds / 60));
+
+    // Calculate duration in minutes
+    contest.durationMinutes = Math.floor(contest.durationSeconds / 60);
+
+    // Calculate freeze duration in minutes
+    contest.freezeDurationMinutes = Math.floor(contest.freezeDurationSeconds / 60);
+
+    const data = {};
+    data.contest = {};
+    data.contest.name = contest.name;
+    data.contest.durationMinutes = contest.durationMinutes;
+    data.contest.freezeDurationMinutes = contest.freezeDurationMinutes;
+    data.contest.penaltyMinutes = 20;
+    data.problems = problems.map(problem => {
+        return {
+            index: problem.index,
+            points: problem.points || (contest.type == "IOI" ? 100 : 1),
+        };
+    });
+
+    data.submissions = submissions.map(submission => {
+        return {
+            handle: submission.author.members[0].name || submission.author.members[0].handle,
+            problemIndex: submission.problem.index,
+            submissionMinutes: submission.submissionMinutes,
+            points: submission.points || (submission.verdict == "OK" ? 1 : 0),
+        };
+    });
+
+    jsonText.value = JSON.stringify(data, null, 2);
+}
+
+function validateJSONFormat(jsonString, schema) {
+    try {
+        const obj = JSON.parse(jsonString);
+        return validateObject(obj, schema);
+    } catch (e) {
+        return "Invalid JSON: " + e.message;
+    }
+}
+
+function validateObject(obj, schema, path = "") {
+    for (const [key, type] of Object.entries(schema)) {
+        const currentPath = path ? `${path}.${key}` : key;
+
+        if (!(key in obj)) {
+            return `Missing key: ${currentPath}`;
+        }
+
+        if (Array.isArray(type)) {
+            if (!Array.isArray(obj[key])) {
+                return `Expected an array at: ${currentPath}`;
+            }
+
+            for (let i = 0; i < obj[key].length; i++) {
+                const error = validateObject(obj[key][i], type[0], `${currentPath}[${i}]`);
+                if (error) {
+                    return error;
+                }
+            }
+        } else if (typeof type === "object") {
+            if (typeof obj[key] !== "object" || Array.isArray(obj[key])) {
+                return `Expected an object at: ${currentPath}`;
+            }
+
+            const error = validateObject(obj[key], type, currentPath);
+            if (error) {
+                return error;
+            }
+        } else if (typeof obj[key] !== type) {
+            return `Type mismatch at: ${currentPath} (Expected ${type}, got ${typeof obj[key]})`;
+        }
+    }
+
+    return null;
+}
+
+function validateJSON() {
+    const text = document.getElementById("json").value;
+
+    const schema = {
+        contest: {
+            durationMinutes: "number",
+            freezeDurationMinutes: "number",
+            penaltyMinutes: "number",
+        },
+        problems: [
+            {
+                index: "string",
+                points: "number",
+            },
+        ],
+        submissions: [
+            {
+                handle: "string",
+                problemIndex: "string",
+                submissionMinutes: "number",
+                points: "number",
+            },
+        ]
+    };
+
+    const error = validateJSONFormat(text, schema);
+    if (error) {
+        alert(error);
+        return false;
+    }
+
+    return true;
+}
+
+function formatScoreAndTime(score, submissionsBefore, submissionsAfter, submissionMinutes) {
+    return `${score} (${submissionsBefore} + ${submissionsAfter}, ${submissionMinutes})`;
+}
+
+let penaltyPerSubmission = 20;
+
+function getTotalPenalty(submissionMinutes, submissionsBefore) {
+    return submissionMinutes + Math.max(submissionsBefore - 1, 0) * penaltyPerSubmission;
+}
+
+let isStarting = false;
 let standings = [];
-const problemIndex = {};
+const problemIndex = {}, problemScore = {};
 let currentIndex = 0;
 
-async function fetchContest() {
-    const contestId = document.getElementById("contestId").value;
-    const apiKey = document.getElementById("apiKey").value;
-    const apiSecret = document.getElementById("apiSecret").value;
-
-    if (!contestId) {
-        alert("Please enter a contest ID");
+async function processContest() {
+    if (!validateJSON()) {
         return;
     }
 
     document.getElementById("title").style.display = "none";
-    document.getElementById("input-container").style.display = "none";
+    document.getElementById("form").style.display = "none";
     document.getElementById("header").style.display = "flex";
     document.getElementById("standings").style.display = "block";
 
-    const { contest, problems, rows } = await fetchAPI('contest.standings', [{ contestId }, { asManager: true }], apiKey, apiSecret);
-    let submissions = await fetchAPI('contest.status', [{ contestId }, { asManager: true }], apiKey, apiSecret);
-    submissions = submissions.filter(submission => submission.author.participantType == "CONTESTANT");
+    const { contest, problems, submissions } = JSON.parse(document.getElementById("json").value);
+
+    penaltyPerSubmission = contest.penaltyMinutes;
 
     problems.forEach((problem, index) => {
         problemIndex[problem.index] = index;
+        problemScore[problem.index] = problem.points;
     });
+
+    const users = [...new Set(submissions.map(submission => submission.handle))];
 
     const standingsContainer = document.getElementById('standings');
 
-    standings = rows.map(user => {
-        const userSubmissions = submissions.filter(submission => submission.author.members[0].handle == user.party.members[0].handle);
+    standings = users.map(handle => {
+        const userSubmissions = submissions.filter(submission => submission.handle == handle);
         const userProblems = problems.map(problem => {
-            const userProblemSubmissions = userSubmissions.filter(submission => submission.problem.index == problem.index);
-            userProblemSubmissions.sort((a, b) => a.relativeTimeSeconds - b.relativeTimeSeconds);
+            const userProblemSubmissions = userSubmissions.filter(submission => submission.problemIndex == problem.index);
             const data = {
                 index: problem.index,
                 beforeFreeze: null,
                 afterFreeze: null,
+                submitAfterFreeze: false,
             }
 
             for (const submission of userProblemSubmissions) {
-                if (!submission.points) {
-                    submission.points = submission.verdict == "OK" ? 100 : 0;
-                }
-                if (!contest.freezeDurationSeconds || submission.relativeTimeSeconds < contest.durationSeconds - contest.freezeDurationSeconds) {
+                if (submission.submissionMinutes < contest.durationMinutes - contest.freezeDurationMinutes) {
                     if (data.beforeFreeze == null) {
                         if (submission.points > 0) {
-                            data.beforeFreeze = [submission.points, submission.relativeTimeSeconds];
+                            data.beforeFreeze = [submission.points, submission.submissionMinutes, 1, 0];
                         } else {
-                            data.beforeFreeze = [0, 0];
+                            data.beforeFreeze = [0, 0, 0, 1];
                         }
                     } else {
                         if (submission.points > data.beforeFreeze[0]) {
-                            data.beforeFreeze = [submission.points, submission.relativeTimeSeconds];
+                            data.beforeFreeze[0] = submission.points;
+                            data.beforeFreeze[1] = submission.submissionMinutes;
+                            data.beforeFreeze[2] += data.beforeFreeze[3] + 1;
+                            data.beforeFreeze[3] = 0;
+                        } else {
+                            data.beforeFreeze[3] += 1;
                         }
                     }
+
+                    data.afterFreeze = [...data.beforeFreeze];
                 } else {
+                    data.submitAfterFreeze = true;
                     if (data.afterFreeze == null) {
                         if (submission.points > 0) {
-                            data.afterFreeze = [submission.points, submission.relativeTimeSeconds];
+                            data.afterFreeze = [submission.points, submission.submissionMinutes, 1, 0];
                         } else {
-                            data.afterFreeze = [0, 0];
+                            data.afterFreeze = [0, 0, 0, 1];
                         }
                     } else {
                         if (submission.points > data.afterFreeze[0]) {
-                            data.afterFreeze = [submission.points, submission.relativeTimeSeconds];
+                            data.afterFreeze[0] = submission.points;
+                            data.afterFreeze[1] = submission.submissionMinutes;
+                            data.afterFreeze[2] += data.afterFreeze[3] + 1;
+                            data.afterFreeze[3] = 0;
+                        } else {
+                            data.afterFreeze[3] += 1;
                         }
                     }
                 }
@@ -164,7 +361,7 @@ async function fetchContest() {
 
         const totalTime = userProblems.reduce((acc, problem) => {
             if (problem.beforeFreeze) {
-                acc += problem.beforeFreeze[1];
+                acc += getTotalPenalty(problem.beforeFreeze[1], problem.beforeFreeze[2]);
             }
 
             return acc;
@@ -172,11 +369,10 @@ async function fetchContest() {
 
         return {
             rank: 0,
-            handle: user.party.members[0].name || user.party.members[0].handle,
+            handle,
             problems: userProblems,
             totalScore,
             totalTime,
-            currentTop: 0,
         };
     });
 
@@ -199,7 +395,7 @@ async function fetchContest() {
 
     currentIndex = standings.length - 1;
 
-    standings.forEach((user, index) => {
+    standings.forEach((user) => {
         const rankBox = document.createElement('div');
         rankBox.classList.add('rank-box');
 
@@ -220,14 +416,16 @@ async function fetchContest() {
         user.problems.forEach(problem => {
             const pointBox = document.createElement("div");
             pointBox.classList.add("point-box");
-            pointBox.textContent = problem.beforeFreeze ? `${problem.beforeFreeze[0]} - ${secondsToDuration(problem.beforeFreeze[1])}` : problem.index;
-            if (problem.afterFreeze) {
+            if (problem.submitAfterFreeze) {
+                pointBox.textContent = problem.beforeFreeze ? formatScoreAndTime(problem.beforeFreeze[0], problem.beforeFreeze[2], problem.afterFreeze[2] + problem.afterFreeze[3] - problem.beforeFreeze[2], problem.beforeFreeze[1]) : formatScoreAndTime(0, 0, problem.afterFreeze[2] + problem.afterFreeze[3], 0);
                 pointBox.style.background = "gray";
                 pointBox.style.color = "#ffffff";
             } else if (problem.beforeFreeze) {
-                pointBox.style.background = getColorForScore(problem.beforeFreeze[0])
+                pointBox.textContent = formatScoreAndTime(problem.beforeFreeze[0], problem.beforeFreeze[2], problem.beforeFreeze[3], problem.beforeFreeze[1]);
+                pointBox.style.background = getColorForScore(problem.beforeFreeze[0], problemScore[problem.index]);
                 pointBox.style.color = "#ffffff";
             } else {
+                pointBox.textContent = problem.index;
                 pointBox.style.background = "#282828";
                 pointBox.style.color = "##646464";
             }
@@ -243,7 +441,7 @@ async function fetchContest() {
 
         const totalTimeDiv = document.createElement("div");
         totalTimeDiv.classList.add("total-time");
-        totalTimeDiv.textContent = secondsToDuration(user.totalTime);
+        totalTimeDiv.textContent = user.totalTime;
 
         rankBox.appendChild(rankDiv);
         rankBox.appendChild(userInfoDiv);
@@ -252,6 +450,8 @@ async function fetchContest() {
 
         standingsContainer.appendChild(rankBox);
     });
+
+    isStarting = true;
 }
 
 let currentAction = 0; // 0: Next user, 1: Next unfrozen problem, 2: Open unfrozen problem
@@ -268,16 +468,8 @@ function getBoxByHandle(handle) {
     return null;
 }
 
-let processDone = true;
-
-document.addEventListener("keydown", function (event) {
-    if (!processDone) {
-        return;
-    }
-
-    if (event.key == 'n') {
-        processDone = false;
-
+function run(auto = false) {
+    return new Promise(resolve => {
         const scrollToBox = document.querySelectorAll(`.rank-box`)[Math.min(currentIndex + 1, standings.length - 1)];
         scrollToBox.scrollIntoView({ behavior: "smooth", block: "end" });
 
@@ -288,10 +480,12 @@ document.addEventListener("keydown", function (event) {
             }
 
             if (currentIndex == -1) {
+                currentAction = -1;
+                resolve();
                 return;
             }
 
-            const unfrozenIndex = standings[currentIndex].problems.findIndex(problem => problem.afterFreeze);
+            const unfrozenIndex = standings[currentIndex].problems.findIndex(problem => problem.submitAfterFreeze);
             const currentBox = document.querySelectorAll(`.rank-box`)[currentIndex];
             currentBox.style.background = "#5782d9";
 
@@ -301,12 +495,17 @@ document.addEventListener("keydown", function (event) {
                 currentAction = 1;
             }
 
-            processDone = true;
+            setTimeout(() => {
+                resolve();
+            }, auto ? 500 : 0);
         } else if (currentAction == 1) {
-            const unfrozenIndex = standings[currentIndex].problems.findIndex(problem => problem.afterFreeze);
+            const unfrozenIndex = standings[currentIndex].problems.findIndex(problem => problem.submitAfterFreeze);
             if (unfrozenIndex == -1) {
                 currentAction = 0;
                 currentIndex--;
+                setTimeout(() => {
+                    resolve();
+                }, auto ? 500 : 0);
             } else {
                 const currentProblem = standings[currentIndex].problems[unfrozenIndex];
                 const currentBox = document.querySelectorAll(`.rank-box`)[currentIndex];
@@ -314,29 +513,25 @@ document.addEventListener("keydown", function (event) {
                 const problemBox = problemPointsDiv.children[problemIndex[currentProblem.index]];
                 problemBox.style.borderColor = "lightgray";
                 currentAction = 2;
-            }
 
-            processDone = true;
+                setTimeout(() => {
+                    resolve();
+                }, auto ? 500 : 0);
+            }
         } else if (currentAction == 2) {
-            const unfrozenIndex = standings[currentIndex].problems.findIndex(problem => problem.afterFreeze);
+            const unfrozenIndex = standings[currentIndex].problems.findIndex(problem => problem.submitAfterFreeze);
             const currentProblem = standings[currentIndex].problems[unfrozenIndex];
             const currentBox = document.querySelectorAll(`.rank-box`)[currentIndex];
             const problemPointsDiv = currentBox.querySelector(".problem-points");
             const problemBox = problemPointsDiv.children[problemIndex[currentProblem.index]];
             const totalScoreDiv = currentBox.querySelector(".total-score");
             const totalTimeDiv = currentBox.querySelector(".total-time");
-            if (!currentProblem.beforeFreeze || currentProblem.beforeFreeze[0] < currentProblem.afterFreeze[0]) {
-                problemBox.textContent = `${currentProblem.afterFreeze[0]} - ${secondsToDuration(currentProblem.afterFreeze[1])}`;
-                problemBox.style.background = getColorForScore(currentProblem.afterFreeze[0]);
-                problemBox.style.color = "#ffffff";
-                standings[currentIndex].totalScore += -(currentProblem.beforeFreeze ? currentProblem.beforeFreeze[0] : 0) + currentProblem.afterFreeze[0];
-                totalScoreDiv.textContent = standings[currentIndex].totalScore;
-                standings[currentIndex].totalTime += -(currentProblem.beforeFreeze ? currentProblem.beforeFreeze[1] : 0) + currentProblem.afterFreeze[1];
-                totalTimeDiv.textContent = secondsToDuration(standings[currentIndex].totalTime);
-            } else {
-                problemBox.style.background = getColorForScore(currentProblem.beforeFreeze[0]);
-            }
-            currentProblem.afterFreeze = null;
+            problemBox.textContent = formatScoreAndTime(currentProblem.afterFreeze[0], currentProblem.afterFreeze[2], currentProblem.afterFreeze[3], currentProblem.afterFreeze[1]);
+            problemBox.style.background = getColorForScore(currentProblem.afterFreeze[0], problemScore[currentProblem.index]);
+            problemBox.style.color = "#ffffff";
+            totalScoreDiv.textContent = standings[currentIndex].totalScore += currentProblem.afterFreeze[0] - (currentProblem.beforeFreeze ? currentProblem.beforeFreeze[0] : 0);
+            totalTimeDiv.textContent = standings[currentIndex].totalTime += getTotalPenalty(currentProblem.afterFreeze[1], currentProblem.afterFreeze[2]) - (currentProblem.beforeFreeze ? getTotalPenalty(currentProblem.beforeFreeze[1], currentProblem.beforeFreeze[2]) : 0);
+            currentProblem.submitAfterFreeze = false;
             problemBox.style.borderColor = "transparent";
 
             let newIndex = currentIndex;
@@ -366,11 +561,11 @@ document.addEventListener("keydown", function (event) {
 
             if (newIndex != currentIndex) {
                 currentBox.style.transition = transitionStyle;
-                currentBox.style.top = `${90 * (newIndex - currentIndex)}px`;
+                currentBox.style.top = `${70 * (newIndex - currentIndex)}px`;
                 for (let i = currentIndex - 1; i >= newIndex; i--) {
                     const box = document.querySelectorAll(`.rank-box`)[i];
                     box.style.transition = transitionStyle;
-                    box.style.top = "90px";
+                    box.style.top = "70px";
                 }
 
                 setTimeout(() => {
@@ -385,7 +580,7 @@ document.addEventListener("keydown", function (event) {
                     document.querySelectorAll(`.rank-box`)[newIndex].style.background = "transparent"
                     document.querySelectorAll(`.rank-box`)[currentIndex].style.background = "#5782d9";
 
-                    const nextUnfrozenIndex = standings[currentIndex].problems.findIndex(problem => problem.afterFreeze);
+                    const nextUnfrozenIndex = standings[currentIndex].problems.findIndex(problem => problem.submitAfterFreeze);
                     if (nextUnfrozenIndex == -1) {
                         currentIndex--;
                         currentAction = 0;
@@ -393,10 +588,12 @@ document.addEventListener("keydown", function (event) {
                         currentAction = 1;
                     }
 
-                    processDone = true;
+                    setTimeout(() => {
+                        resolve();
+                    }, auto ? 500 : 0);
                 }, 1000);
             } else {
-                const nextUnfrozenIndex = standings[currentIndex].problems.findIndex(problem => problem.afterFreeze);
+                const nextUnfrozenIndex = standings[currentIndex].problems.findIndex(problem => problem.submitAfterFreeze);
                 if (nextUnfrozenIndex == -1) {
                     currentIndex--;
                     currentAction = 0;
@@ -404,8 +601,30 @@ document.addEventListener("keydown", function (event) {
                     currentAction = 1;
                 }
 
-                processDone = true;
+                setTimeout(() => {
+                    resolve();
+                }, auto ? 500 : 0);
             }
         }
+    });
+}
+
+let isRunning = false;
+
+document.addEventListener("keydown", async function (event) {
+    if (!isStarting || isRunning) {
+        return;
     }
+
+    isRunning = true;
+
+    if (event.key == 'n' || event.key == 'N') {
+        await run();
+    } else if (event.key == 'a' || event.key == 'A') {
+        while (currentIndex >= 0 || currentAction == 0) {
+            await run(true);
+        }
+    }
+
+    isRunning = false;
 });
