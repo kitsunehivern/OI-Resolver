@@ -146,7 +146,7 @@ async function fetchContest() {
     submissions = submissions.reverse();
 
     // Calculate relative time in minutes
-    submissions.forEach(submission => submission.submissionMinutes = Math.floor(submission.relativeTimeSeconds / 60));
+    submissions.forEach(submission => submission.submitMinutes = Math.floor(submission.relativeTimeSeconds / 60));
 
     // Calculate duration in minutes
     contest.durationMinutes = Math.floor(contest.durationSeconds / 60);
@@ -171,7 +171,7 @@ async function fetchContest() {
         return {
             handle: submission.author.members[0].name || submission.author.members[0].handle,
             problemIndex: submission.problem.index,
-            submissionMinutes: submission.submissionMinutes,
+            submitMinutes: submission.submitMinutes,
             points: submission.points || (submission.verdict == "OK" ? 1 : 0),
         };
     });
@@ -243,7 +243,7 @@ function validateJSON() {
             {
                 handle: "string",
                 problemIndex: "string",
-                submissionMinutes: "number",
+                submitMinutes: "number",
                 points: "number",
             },
         ]
@@ -258,14 +258,14 @@ function validateJSON() {
     return true;
 }
 
-function formatScoreAndTime(score, submissionsBefore, submissionsAfter, submissionMinutes) {
-    return `${score} (${submissionsBefore} + ${submissionsAfter}, ${submissionMinutes})`;
+function formatScoreAndTime(score, submissionsBefore, submissionsAfter, submitMinutes) {
+    return `${score} (${submissionsBefore} + ${submissionsAfter}, ${submitMinutes})`;
 }
 
 let penaltyPerSubmission = 20;
 
-function getTotalPenalty(submissionMinutes, submissionsBefore) {
-    return submissionMinutes + Math.max(submissionsBefore - 1, 0) * penaltyPerSubmission;
+function getTotalPenalty(submitMinutes, submissionsBefore) {
+    return submitMinutes + Math.max(submissionsBefore - 1, 0) * penaltyPerSubmission;
 }
 
 let isStarting = false;
@@ -308,17 +308,17 @@ async function processContest() {
             }
 
             for (const submission of userProblemSubmissions) {
-                if (submission.submissionMinutes < contest.durationMinutes - contest.freezeDurationMinutes) {
+                if (submission.submitMinutes < contest.durationMinutes - contest.freezeDurationMinutes) {
                     if (data.beforeFreeze == null) {
                         if (submission.points > 0) {
-                            data.beforeFreeze = [submission.points, submission.submissionMinutes, 1, 0];
+                            data.beforeFreeze = [submission.points, submission.submitMinutes, 1, 0];
                         } else {
                             data.beforeFreeze = [0, 0, 0, 1];
                         }
                     } else {
                         if (submission.points > data.beforeFreeze[0]) {
                             data.beforeFreeze[0] = submission.points;
-                            data.beforeFreeze[1] = submission.submissionMinutes;
+                            data.beforeFreeze[1] = submission.submitMinutes;
                             data.beforeFreeze[2] += data.beforeFreeze[3] + 1;
                             data.beforeFreeze[3] = 0;
                         } else {
@@ -331,14 +331,14 @@ async function processContest() {
                     data.submitAfterFreeze = true;
                     if (data.afterFreeze == null) {
                         if (submission.points > 0) {
-                            data.afterFreeze = [submission.points, submission.submissionMinutes, 1, 0];
+                            data.afterFreeze = [submission.points, submission.submitMinutes, 1, 0];
                         } else {
                             data.afterFreeze = [0, 0, 0, 1];
                         }
                     } else {
                         if (submission.points > data.afterFreeze[0]) {
                             data.afterFreeze[0] = submission.points;
-                            data.afterFreeze[1] = submission.submissionMinutes;
+                            data.afterFreeze[1] = submission.submitMinutes;
                             data.afterFreeze[2] += data.afterFreeze[3] + 1;
                             data.afterFreeze[3] = 0;
                         } else {
