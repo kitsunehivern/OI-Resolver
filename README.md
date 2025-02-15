@@ -109,12 +109,17 @@ You can use the following commands:
 
 - Press `N` to move to the **N**ext submission.
 - Press `A` to **A**uto-play the resolver.
+- Press `R` to **R**eset the resolver.
 
 ## Notes
 
 - The tool is designed to be used on a desktop or laptop. It may not work well on mobile devices.
 
 - If there are many problems, the content of the point box may overflow. You can try zooming out the page to fix this.
+
+- If smooth scrolling is not working, you can try enabling it in the browser settings (e.g. `chrome://flags/#smooth-scrolling`).
+
+- If the logo of the contestant is not displayed, make sure the path is correct or try pressing `R` to reset the resolver.
 
 ## Contributing
 

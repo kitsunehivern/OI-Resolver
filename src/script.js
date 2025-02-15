@@ -285,13 +285,17 @@ function getTotalPenalty(submitMinutes, submissionsBefore) {
 
 let isStarting = false;
 let standings = [];
-const problemIndex = {}, problemScore = {};
+const problemIndex = {};
+const problemScore = {};
 let currentIndex = 0;
+let currentAction = 0; // 0: Next user, 1: Next unfrozen problem, 2: Open unfrozen problem
 
 async function processContest() {
     if (!validateJSON()) {
         return;
     }
+
+    isStarting = false;
 
     document.getElementById("title").style.display = "none";
     document.getElementById("form").style.display = "none";
@@ -308,6 +312,7 @@ async function processContest() {
     });
 
     const standingsContainer = document.getElementById('standings');
+    standingsContainer.innerHTML = "";
 
     standings = contestants.map(contestant => {
         const userSubmissions = submissions.filter(submission => submission.name == contestant.name);
@@ -408,6 +413,7 @@ async function processContest() {
     }
 
     currentIndex = standings.length - 1;
+    currentAction = 0;
 
     standings.forEach((user) => {
         const rankBox = document.createElement('div');
@@ -474,7 +480,6 @@ async function processContest() {
     isStarting = true;
 }
 
-let currentAction = 0; // 0: Next user, 1: Next unfrozen problem, 2: Open unfrozen problem
 const transitionStyle = "top 1s ease-in-out";
 
 function getBoxByName(name) {
@@ -644,6 +649,8 @@ document.addEventListener("keydown", async function (event) {
         while (currentIndex >= 0 || currentAction == 0) {
             await run(true);
         }
+    } else if (event.key == 'r' || event.key == 'R') {
+        await processContest();
     }
 
     isRunning = false;
