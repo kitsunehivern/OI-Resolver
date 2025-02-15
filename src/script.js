@@ -167,9 +167,19 @@ async function fetchContest() {
         };
     });
 
+    const contestants = [...new Set(submissions.map(submission => `${submission.author.members[0].handle}/${submission.author.members[0].name || ""}`))];
+    data.contestants = contestants.map(contestant => {
+        const handle = contestant.split("/")[0];
+        const name = contestant.split("/")[1];
+        return {
+            name: name || handle,
+            logo: `https://codeforces.com/userphoto/title/${handle}/photo.jpg`,
+        };
+    });
+
     data.submissions = submissions.map(submission => {
         return {
-            handle: submission.author.members[0].name || submission.author.members[0].handle,
+            name: submission.author.members[0].name || submission.author.members[0].handle,
             problemIndex: submission.problem.index,
             submitMinutes: submission.submitMinutes,
             points: submission.points || (submission.verdict == "OK" ? 1 : 0),
@@ -239,9 +249,14 @@ function validateJSON() {
                 points: "number",
             },
         ],
+        contestants: [
+            {
+                name: "string",
+            },
+        ],
         submissions: [
             {
-                handle: "string",
+                name: "string",
                 problemIndex: "string",
                 submitMinutes: "number",
                 points: "number",
@@ -283,7 +298,7 @@ async function processContest() {
     document.getElementById("header").style.display = "flex";
     document.getElementById("standings").style.display = "block";
 
-    const { contest, problems, submissions } = JSON.parse(document.getElementById("json").value);
+    const { contest, problems, contestants, submissions } = JSON.parse(document.getElementById("json").value);
 
     penaltyPerSubmission = contest.penaltyMinutes;
 
@@ -292,12 +307,10 @@ async function processContest() {
         problemScore[problem.index] = problem.points;
     });
 
-    const users = [...new Set(submissions.map(submission => submission.handle))];
-
     const standingsContainer = document.getElementById('standings');
 
-    standings = users.map(handle => {
-        const userSubmissions = submissions.filter(submission => submission.handle == handle);
+    standings = contestants.map(contestant => {
+        const userSubmissions = submissions.filter(submission => submission.name == contestant.name);
         const userProblems = problems.map(problem => {
             const userProblemSubmissions = userSubmissions.filter(submission => submission.problemIndex == problem.index);
             const data = {
@@ -369,7 +382,8 @@ async function processContest() {
 
         return {
             rank: 0,
-            handle,
+            name: contestant.name,
+            logo: contestant.logo,
             problems: userProblems,
             totalScore,
             totalTime,
@@ -403,12 +417,17 @@ async function processContest() {
         rankDiv.classList.add('rank');
         rankDiv.textContent = user.rank;
 
+        const logoDiv = document.createElement('img');
+        logoDiv.classList.add('logo');
+        logoDiv.src = user.logo || "img/sensei.png";
+        logoDiv.loading = "lazy";
+
         const userInfoDiv = document.createElement("div");
         userInfoDiv.classList.add("user-info");
 
-        const handleDiv = document.createElement("div");
-        handleDiv.classList.add("handle");
-        handleDiv.textContent = user.handle;
+        const nameDiv = document.createElement("div");
+        nameDiv.classList.add("name");
+        nameDiv.textContent = user.name;
 
         const problemPointsDiv = document.createElement("div");
         problemPointsDiv.classList.add("problem-points");
@@ -432,7 +451,7 @@ async function processContest() {
             problemPointsDiv.appendChild(pointBox);
         });
 
-        userInfoDiv.appendChild(handleDiv);
+        userInfoDiv.appendChild(nameDiv);
         userInfoDiv.appendChild(problemPointsDiv);
 
         const totalScoreDiv = document.createElement("div");
@@ -444,6 +463,7 @@ async function processContest() {
         totalTimeDiv.textContent = user.totalTime;
 
         rankBox.appendChild(rankDiv);
+        rankBox.appendChild(logoDiv);
         rankBox.appendChild(userInfoDiv);
         rankBox.appendChild(totalScoreDiv);
         rankBox.appendChild(totalTimeDiv);
@@ -457,10 +477,10 @@ async function processContest() {
 let currentAction = 0; // 0: Next user, 1: Next unfrozen problem, 2: Open unfrozen problem
 const transitionStyle = "top 1s ease-in-out";
 
-function getBoxByHandle(handle) {
+function getBoxByName(name) {
     const rankBoxes = document.querySelectorAll(".rank-box");
     for (let i = 0; i < rankBoxes.length; i++) {
-        if (rankBoxes[i].querySelector(".handle").textContent == handle) {
+        if (rankBoxes[i].querySelector(".name").textContent == name) {
             return rankBoxes[i];
         }
     }
@@ -555,7 +575,7 @@ function run(auto = false) {
                     }
                 }
 
-                const rankBox = getBoxByHandle(standings[i].handle);
+                const rankBox = getBoxByName(standings[i].name);
                 rankBox.querySelector(".rank").textContent = standings[i].rank;
             }
 

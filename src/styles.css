@@ -140,6 +140,10 @@ button:hover {
     color: white;
 }
 
+.header-logo {
+    width: 55px;
+}
+
 .header-name {
     flex: 1;
     color: white;
@@ -191,6 +195,12 @@ button:hover {
     color: white;
 }
 
+.logo {
+    width: 55px;
+    height: 55px;
+    object-fit: cover;
+}
+
 .user-info {
     flex: 1;
     display: flex;
@@ -198,7 +208,7 @@ button:hover {
     gap: 5px;
 }
 
-.handle {
+.name {
     font-size: 1.6rem;
     color: white;
 }

@@ -33,27 +33,40 @@ The input JSON should be in the following format:
       "points": 100
     }
   ],
+  "contestants": [
+    {
+      "name": "Kitsune"
+    },
+    {
+      "name": "Hoshino",
+      "logo": "img/hoshino.png"
+    },
+    {
+      "name": "Hina",
+      "logo": "img/hina.png"
+    }
+  ],
   "submissions": [
     {
-      "handle": "Kitsune",
+      "name": "Kitsune",
       "problemIndex": "A",
       "submitMinutes": 10,
       "points": 30
     },
     {
-      "handle": "Hina",
+      "name": "Hina",
       "problemIndex": "A",
       "submitMinutes": 20,
       "points": 50
     },
     {
-      "handle": "Hoshino",
+      "name": "Hoshino",
       "problemIndex": "A",
       "submitMinutes": 30,
       "points": 70
     },
     {
-      "handle": "Kitsune",
+      "name": "Kitsune",
       "problemIndex": "A",
       "submitMinutes": 50,
       "points": 100
@@ -71,8 +84,11 @@ Explanation:
 - `problems`: The information of the problems.
     - `problems.index`: The index of the problem.
     - `problems.points`: The maximum points for the problem.
+- `contestants`: The information of the contestants.
+    - `contestants.name`: The name of the contestant.
+    - `contestants.logo` (*optional*): The path to the logo of the contestant.
 - `submissions`: The information of the submissions.
-    - `submissions.handle`: The handle of the contestant.
+    - `submissions.name`: The name of the contestant.
     - `submissions.problemIndex`: The index of the problem.
     - `submissions.submitMinutes`: The time elapsed from the start of the contest until the submission in minutes.
     - `submissions.points`: The score of the submission.
@@ -85,20 +101,20 @@ Interestingly, if the data is set up correctly, the tool can also be used for IC
 
 You can only use this for Codeforces contests where **you are the manager**. You need to provide the contest ID along with your API key and secret from the [Codeforces API](https://codeforces.com/settings/api). After you input the data, the tool will fetch contest data and convert it into the above JSON format. It supports both OI and ICPC-style contests.
 
+When using the Codeforces API, the maximum points for each problem are not included in the response for private contest. The tool will set it to 100 for OI-style contests and 1 for ICPC-style contests. You can manually change it in the JSON data if needed.
+
 ### Control the resolver
 
 You can use the following commands:
 
-- Press `N` to move to the **n**ext submission.
-- Press `A` to **a**uto-play the resolver.
+- Press `N` to move to the **N**ext submission.
+- Press `A` to **A**uto-play the resolver.
 
 ## Notes
 
 - The tool is designed to be used on a desktop or laptop. It may not work well on mobile devices.
 
 - If there are many problems, the content of the point box may overflow. You can try zooming out the page to fix this.
-
-- When using the Codeforces API, the maximum points for each problem are not included in the response for private contest. The tool will set it to 100 for OI-style contests and 1 for ICPC-style contests. You can manually change it in the JSON data if needed.
 
 ## Contributing
 
