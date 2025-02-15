@@ -50,7 +50,7 @@ function readJSON() {
         return;
     }
 
-    const jsonText = document.getElementById("json");
+    const jsonText = document.getElementById("json-data");
     if (jsonText.value) {
         if (!confirm("Are you sure you want to overwrite the current data?")) {
             return;
@@ -99,7 +99,7 @@ async function fetchContest() {
         return;
     }
 
-    const jsonText = document.getElementById("json");
+    const jsonText = document.getElementById("json-data");
 
     if (jsonText.value) {
         if (!confirm("Are you sure you want to overwrite the current data?")) {
@@ -235,10 +235,11 @@ function validateObject(obj, schema, path = "") {
 }
 
 function validateJSON() {
-    const text = document.getElementById("json").value;
+    const text = document.getElementById("json-data").value;
 
     const schema = {
         contest: {
+            name: "string",
             durationMinutes: "number",
             freezeDurationMinutes: "number",
             penaltyMinutes: "number",
@@ -270,7 +271,98 @@ function validateJSON() {
         return false;
     }
 
+    const { contest, problems, contestants, submissions } = JSON.parse(text);
+
+    // Check for contest info
+    if (contest.durationMinutes <= 0) {
+        alert("Invalid contest duration");
+        return false;
+    }
+
+    if (contest.freezeDurationMinutes < 0 || contest.freezeDurationMinutes > contest.durationMinutes) {
+        alert("Invalid freeze duration");
+        return false;
+    }
+
+    if (contest.penaltyMinutes < 0) {
+        alert("Invalid penalty duration");
+        return false;
+    }
+
+    // Check for duplicate problem indexes and problem points
+    const problemIndexes = new Set();
+    for (const problem of problems) {
+        if (problemIndexes.has(problem.index)) {
+            alert(`Duplicate problem index: ${problem.index}`);
+            return false;
+        }
+
+        problemIndexes.add(problem.index);
+
+        if (problem.points <= 0) {
+            alert(`Invalid points for problem ${problem.index}`);
+            return false;
+        }
+    }
+
+    // Check for contestant names
+    const contestantNames = new Set();
+    for (const contestant of contestants) {
+        if (contestantNames.has(contestant.name)) {
+            alert(`Duplicate contestant name: ${contestant.name}`);
+            return false;
+        }
+
+        contestantNames.add(contestant.name);
+    }
+
+    // Check if all submissions are valid
+    for (const submission of submissions) {
+        if (!problemIndexes.has(submission.problemIndex)) {
+            alert(`Invalid problem index: ${submission.problemIndex}`);
+            return false;
+        }
+
+        if (!contestantNames.has(submission.name)) {
+            alert(`Invalid contestant name: ${submission.name}`);
+            return false;
+        }
+
+        if (submission.submitMinutes < 0 || submission.submitMinutes >= contest.durationMinutes) {
+            alert(`Invalid submit time for ${submission.name} at ${submission.problemIndex}: ${submission.submitMinutes}`);
+            return false;
+        }
+
+        if (submission.points < 0 || submission.points > problems.find(problem => problem.index == submission.problemIndex).points) {
+            alert(`Invalid points for ${submission.name} at ${submission.problemIndex}: ${submission.points}`);
+            return false;
+        }
+    }
+
     return true;
+}
+
+let currentScreen = 0;
+
+function startContest() {
+    if (!validateJSON()) {
+        return;
+    }
+
+    document.getElementById("input-screen").classList.toggle("hidden");
+    document.getElementById("splash-screen").classList.toggle("hidden");
+    currentScreen = 1;
+
+    let pendingSubmissions = 0;
+    const { contest, submissions } = JSON.parse(document.getElementById("json-data").value);
+    submissions.forEach(submission => {
+        if (submission.submitMinutes >= contest.durationMinutes - contest.freezeDurationMinutes) {
+            pendingSubmissions++;
+        }
+    });
+
+    document.getElementById("contest-name").textContent = contest.name;
+    document.getElementById("pending-count").textContent = `${pendingSubmissions} pending submission${pendingSubmissions == 1 ? "" : "s"}`;
 }
 
 function formatScoreAndTime(score, submissionsBefore, submissionsAfter, submitMinutes) {
@@ -290,19 +382,16 @@ const problemScore = {};
 let currentIndex = 0;
 let currentAction = 0; // 0: Next user, 1: Next unfrozen problem, 2: Open unfrozen problem
 
-async function processContest() {
-    if (!validateJSON()) {
-        return;
-    }
-
+function processContest() {
     isStarting = false;
 
-    document.getElementById("title").style.display = "none";
-    document.getElementById("form").style.display = "none";
-    document.getElementById("header").style.display = "flex";
-    document.getElementById("standings").style.display = "block";
+    if (currentScreen == 1) {
+        document.getElementById("splash-screen").classList.toggle("hidden");
+        document.getElementById("output-screen").classList.toggle("hidden");
+        currentScreen = 2;
+    }
 
-    const { contest, problems, contestants, submissions } = JSON.parse(document.getElementById("json").value);
+    const { contest, problems, contestants, submissions } = JSON.parse(document.getElementById("json-data").value);
 
     penaltyPerSubmission = contest.penaltyMinutes;
 
@@ -340,7 +429,7 @@ async function processContest() {
                             data.beforeFreeze[2] += data.beforeFreeze[3] + 1;
                             data.beforeFreeze[3] = 0;
                         } else {
-                            data.beforeFreeze[3] += 1;
+                            data.beforeFreeze[3]++;
                         }
                     }
 
@@ -360,7 +449,7 @@ async function processContest() {
                             data.afterFreeze[2] += data.afterFreeze[3] + 1;
                             data.afterFreeze[3] = 0;
                         } else {
-                            data.afterFreeze[3] += 1;
+                            data.afterFreeze[3]++;
                         }
                     }
                 }
@@ -425,7 +514,7 @@ async function processContest() {
 
         const logoDiv = document.createElement('img');
         logoDiv.classList.add('logo');
-        logoDiv.src = user.logo || "img/sensei.png";
+        logoDiv.src = user.logo || "img/default.png";
         logoDiv.loading = "lazy";
 
         const userInfoDiv = document.createElement("div");
@@ -637,6 +726,14 @@ function run(auto = false) {
 let isRunning = false;
 
 document.addEventListener("keydown", async function (event) {
+    if (currentScreen == 1) {
+        if (event.key == 'Enter') {
+            processContest();
+        }
+
+        return;
+    }
+
     if (!isStarting || isRunning) {
         return;
     }
@@ -650,7 +747,7 @@ document.addEventListener("keydown", async function (event) {
             await run(true);
         }
     } else if (event.key == 'r' || event.key == 'R') {
-        await processContest();
+        processContest();
     }
 
     isRunning = false;

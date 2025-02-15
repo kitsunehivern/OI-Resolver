@@ -18,11 +18,12 @@ You can choose between two ways to input the data:
 
 #### Raw JSON
 
-The input JSON should be in the following format:
+The input JSON should have the format as the following example:
 
 ```json
 {
   "contest": {
+    "name": "Blue Contest",
     "durationMinutes": 60,
     "freezeDurationMinutes": 30,
     "penaltyMinutes": 20
@@ -35,7 +36,8 @@ The input JSON should be in the following format:
   ],
   "contestants": [
     {
-      "name": "Kitsune"
+      "name": "Kitsune",
+      "logo": "img/sensei.png"
     },
     {
       "name": "Hoshino",
@@ -76,8 +78,8 @@ The input JSON should be in the following format:
 ```
 
 Explanation:
-
 - `contest`: The information of the contest.
+    - `contest.name`: The name of the contest.
     - `contest.durationMinutes`: The duration of the contest in minutes.
     - `contest.freezeDurationMinutes`: The duration of the frozen period in minutes.
     - `contest.penaltyMinutes`: The penalty in minutes for each submission before the first highest positive score submission for each problem.
@@ -105,8 +107,7 @@ When using the Codeforces API, the maximum points for each problem are not inclu
 
 ### Control the resolver
 
-You can use the following commands:
-
+If you successfully click the submit button, a splash screen will appear. Press `Enter` to start the resolver. Then, you can use the following keys:
 - Press `N` to move to the **N**ext submission.
 - Press `A` to **A**uto-play the resolver.
 - Press `R` to **R**eset the resolver.

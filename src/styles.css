@@ -1,6 +1,5 @@
 *,
 html {
-    /* try chrome://flags/#smooth-scrolling if it still doesn't work */
     scroll-behavior: smooth !important;
 }
 
@@ -10,19 +9,50 @@ body {
     margin: 0px;
 }
 
-::-webkit-scrollbar {
+body::-webkit-scrollbar {
     display: none;
 }
 
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transition: opacity 1s ease-in-out, visibility 1s ease-in-out;
+}
+
+.screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.center {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+.gap {
+    height: 10px;
 }
 
 .title {
     color: white;
     text-align: center;
+    font-size: 3rem;
+    margin: 0px;
+}
+
+.subtitle {
+    color: white;
+    text-align: center;
+    font-size: 1rem;
+    margin: 0px;
+    font-weight: initial;
 }
 
 .form-container {
@@ -31,7 +61,7 @@ input[type=number]::-webkit-outer-spin-button {
     justify-content: center;
     gap: 10px;
     margin: 0px auto;
-    max-width: 600px;
+    max-width: 500px;
     width: 100%;
 }
 
@@ -39,11 +69,11 @@ input[type=number]::-webkit-outer-spin-button {
     display: flex;
     flex-direction: row;
     gap: 10px;
-    width: 100%;
 }
 
 .input-container>* {
     flex-grow: 1;
+    min-width: 0;
 }
 
 .form-component {
@@ -58,8 +88,24 @@ label {
     font-size: 0.8rem;
 }
 
-a {
+a:link {
     color: white;
+    text-decoration: none;
+}
+
+a:visited {
+    color: white;
+    text-decoration: none;
+}
+
+a:hover {
+    color: white;
+    text-decoration: underline;
+}
+
+a:active {
+    color: white;
+    text-decoration: underline;
 }
 
 select {
@@ -73,6 +119,12 @@ input {
     background: white;
     padding: 10px;
     border-radius: 5px;
+}
+
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 
 textarea {
@@ -121,7 +173,7 @@ button:hover {
 }
 
 .header {
-    display: none;
+    display: flex;
     position: sticky;
     align-items: center;
     top: 0;
@@ -173,7 +225,6 @@ button:hover {
 }
 
 .standings {
-    display: none;
     background-image: repeating-linear-gradient(180deg, #3c3c3c 0px, #3c3c3c 70px, black 70px, black 140px);
 }
 
