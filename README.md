@@ -37,15 +37,18 @@ The input JSON should have the format as the following example:
   "contestants": [
     {
       "name": "Kitsune",
-      "logo": "img/sensei.png"
+      "logo": "img/sensei.png",
+      "rank": "grandmaster"
     },
     {
       "name": "Hoshino",
-      "logo": "img/hoshino.png"
+      "logo": "img/hoshino.png",
+      "rank": "specialist"
     },
     {
       "name": "Hina",
-      "logo": "img/hina.png"
+      "logo": "img/hina.png",
+      "rank": "candidate master"
     }
   ],
   "submissions": [
@@ -78,22 +81,23 @@ The input JSON should have the format as the following example:
 ```
 
 Explanation:
-- `contest`: The information of the contest.
-    - `contest.name`: The name of the contest.
-    - `contest.durationMinutes`: The duration of the contest in minutes.
-    - `contest.freezeDurationMinutes`: The duration of the frozen period in minutes.
-    - `contest.penaltyMinutes`: The penalty in minutes for each submission before the first highest positive score submission for each problem.
-- `problems`: The information of the problems.
-    - `problems.index`: The index of the problem.
-    - `problems.points`: The maximum points for the problem.
-- `contestants`: The information of the contestants.
-    - `contestants.name`: The name of the contestant.
-    - `contestants.logo` (*optional*): The path to the logo of the contestant.
-- `submissions`: The information of the submissions.
-    - `submissions.name`: The name of the contestant.
-    - `submissions.problemIndex`: The index of the problem.
-    - `submissions.submitMinutes`: The time elapsed from the start of the contest until the submission in minutes.
-    - `submissions.points`: The score of the submission.
+- `contest`: Information of the contest.
+    - `contest.name`: Name of the contest.
+    - `contest.durationMinutes`: Duration of the contest in minutes.
+    - `contest.freezeDurationMinutes`: Duration of the frozen period in minutes.
+    - `contest.penaltyMinutes`: Penalty in minutes for each submission before the first highest positive score submission for each problem.
+- `problems`: Information of the problems.
+    - `problems.index`: Index of the problem.
+    - `problems.points`: Maximum points for the problem.
+- `contestants`: Information of the contestants.
+    - `contestants.name`: Name of the contestant.
+    - `contestants.logo` (*optional*): Path to the logo of the contestant.
+    - `contestants.rank` (*optional*): Codeforces rank of the contestant.
+- `submissions`: Information of the submissions.
+    - `submissions.name`: Name of the contestant.
+    - `submissions.problemIndex`: Index of the problem.
+    - `submissions.submitMinutes`: Time elapsed from the start of the contest until the submission in minutes.
+    - `submissions.points`: Score of the submission.
 
 **Make sure the `submissions` array is sorted in ascending order based on the submit time (measured in seconds)**.
 

@@ -4,6 +4,15 @@ async function sha512Hash(string) {
     });
 }
 
+function uniqueByKey(array, key) {
+    const seen = new Set();
+    return array.filter(item => {
+        if (seen.has(item[key])) return false;
+        seen.add(item[key]);
+        return true;
+    });
+}
+
 function getColorForScore(score, maxScore) {
     score = Math.max(0, Math.min(maxScore, score));
 
@@ -66,18 +75,18 @@ function readJSON() {
 }
 
 async function fetchAPI(method, params, apiKey, apiSecret) {
-    let url = `https://codeforces.com/api/${method}?` + params.map(p => `${Object.keys(p)[0]}=${Object.values(p)[0]}`).join('&');
+    let url = `https://codeforces.com/api/${method}?` + (new URLSearchParams(params).toString());
     if (apiKey && apiSecret) {
         const time = Math.floor(Date.now() / 1000);
         const rand = Math.floor(Math.random() * (10 ** 6 - 10 ** 5 - 1)) + 10 ** 5;
-        params.push({ apiKey });
-        params.push({ time });
-        params.sort((a, b) => Object.keys(a)[0].localeCompare(Object.keys(b)[0]));
-        const hash = await sha512Hash(`${rand}/${method}?` + params.map(p => `${Object.keys(p)[0]}=${Object.values(p)[0]}`).join('&') + '#' + apiSecret);
+        params.apiKey = apiKey;
+        params.time = time;
+        params = Object.fromEntries(Object.entries(params).sort(([a], [b]) => a.localeCompare(b)));
+        const hash = await sha512Hash(`${rand}/${method}?` + (new URLSearchParams(params).toString()) + '#' + apiSecret);
         url += `&apiKey=${apiKey}&time=${time}&apiSig=${rand}${hash}`;
     }
 
-    // console.log("Fetching", url);
+    console.log("Fetching", url);
 
     const response = await fetch(url);
     let { status, result, comment } = await response.json();
@@ -85,7 +94,7 @@ async function fetchAPI(method, params, apiKey, apiSecret) {
         comment = comment.split(';');
     }
 
-    // console.log("Fetched", { status, result, comment });
+    console.log("Fetched", { status, result, comment });
 
     return { status, result, comment };
 }
@@ -108,7 +117,7 @@ async function fetchContest() {
     }
 
     jsonText.value = "Fetching contest info and problems...";
-    let { status, result, comment } = await fetchAPI('contest.standings', [{ contestId }, { asManager: true }], apiKey, apiSecret);
+    let { status, result, comment } = await fetchAPI('contest.standings', { contestId, participantTypes: "CONTESTANT", asManager: true }, apiKey, apiSecret);
 
     let contest, problems;
     if (status != "OK") {
@@ -120,11 +129,11 @@ async function fetchContest() {
     }
 
     jsonText.value += "Waiting between requests...";
-    await new Promise(resolve => setTimeout(resolve, 2500)); // wait between requests
+    await new Promise(resolve => setTimeout(resolve, 2500));
     jsonText.value += " done\n";
 
-    jsonText.value += "Fetching contest submissions...\n";
-    ({ status, result, comment } = await fetchAPI('contest.status', [{ contestId }, { asManager: true }], apiKey, apiSecret));
+    jsonText.value += "Fetching contest submissions...";
+    ({ status, result, comment } = await fetchAPI('contest.status', { contestId, asManager: true }, apiKey, apiSecret));
 
     let submissions;
     if (status != "OK") {
@@ -145,20 +154,41 @@ async function fetchContest() {
     // Reverse submissions
     submissions = submissions.reverse();
 
-    // Calculate relative time in minutes
-    submissions.forEach(submission => submission.submitMinutes = Math.floor(submission.relativeTimeSeconds / 60));
+    const contestants = uniqueByKey([...new Set(submissions.map(submission => submission.author.members[0]))], "handle");
+    for (let i = 0; i < contestants.length; i++) {
+        contestants[i].index = i;
+    }
 
-    // Calculate duration in minutes
-    contest.durationMinutes = Math.floor(contest.durationSeconds / 60);
+    const realContestants = contestants.filter(contestant => !contestant.handle.includes("="));
 
-    // Calculate freeze duration in minutes
-    contest.freezeDurationMinutes = Math.floor(contest.freezeDurationSeconds / 60);
+    if (realContestants.length != 0) {
+        jsonText.value += "Waiting between requests...";
+        await new Promise(resolve => setTimeout(resolve, 2500));
+        jsonText.value += " done\n";
+
+        jsonText.value += "Fetching contestant info...";
+        ({ status, result, comment } = await fetchAPI('user.info', { handles: realContestants.map(contestant => contestant.handle).join(";"), checkHistoricHandles: false }));
+
+        let users;
+        if (status != "OK") {
+            jsonText.value = comment.join('\n');
+            return;
+        } else {
+            jsonText.value += " done\n";
+            users = result;
+        }
+
+        for (let i = 0; i < realContestants.length; i++) {
+            contestants[realContestants[i].index].logo = users[i].titlePhoto || users[i].avatar;
+            contestants[realContestants[i].index].rank = users[i].rank;
+        }
+    }
 
     const data = {};
     data.contest = {};
     data.contest.name = contest.name;
-    data.contest.durationMinutes = contest.durationMinutes;
-    data.contest.freezeDurationMinutes = contest.freezeDurationMinutes;
+    data.contest.durationMinutes = Math.floor(contest.durationSeconds / 60);
+    data.contest.freezeDurationMinutes = Math.floor(contest.freezeDurationSeconds / 60);
     data.contest.penaltyMinutes = 20;
     data.problems = problems.map(problem => {
         return {
@@ -167,13 +197,12 @@ async function fetchContest() {
         };
     });
 
-    const contestants = [...new Set(submissions.map(submission => `${submission.author.members[0].handle}/${submission.author.members[0].name || ""}`))];
+
     data.contestants = contestants.map(contestant => {
-        const handle = contestant.split("/")[0];
-        const name = contestant.split("/")[1];
         return {
-            name: name || handle,
-            logo: `https://codeforces.com/userphoto/title/${handle}/photo.jpg`,
+            name: contestant.name || contestant.handle,
+            logo: contestant.logo,
+            rank: contestant.rank,
         };
     });
 
@@ -181,7 +210,7 @@ async function fetchContest() {
         return {
             name: submission.author.members[0].name || submission.author.members[0].handle,
             problemIndex: submission.problem.index,
-            submitMinutes: submission.submitMinutes,
+            submitMinutes: Math.floor(submission.relativeTimeSeconds / 60),
             points: submission.points || (submission.verdict == "OK" ? 1 : 0),
         };
     });
@@ -478,6 +507,7 @@ function processContest() {
             rank: 0,
             name: contestant.name,
             logo: contestant.logo,
+            rankCF: contestant.rank,
             problems: userProblems,
             totalScore,
             totalTime,
@@ -504,6 +534,18 @@ function processContest() {
     currentIndex = standings.length - 1;
     currentAction = 0;
 
+    const rankToColor = {
+        "newbie": "gray",
+        "pupil": "green",
+        "specialist": "cyan",
+        "expert": "blue",
+        "candidate master": "purple",
+        "master": "orange",
+        "international master": "orange",
+        "grandmaster": "red",
+        "international grandmaster": "red",
+    }
+
     standings.forEach((user) => {
         const rankBox = document.createElement('div');
         rankBox.classList.add('rank-box');
@@ -516,6 +558,7 @@ function processContest() {
         logoDiv.classList.add('logo');
         logoDiv.src = user.logo || "img/default.png";
         logoDiv.loading = "lazy";
+        logoDiv.onerror = "this.onerror=null; this.src='img/default.png'";
 
         const userInfoDiv = document.createElement("div");
         userInfoDiv.classList.add("user-info");
@@ -523,6 +566,10 @@ function processContest() {
         const nameDiv = document.createElement("div");
         nameDiv.classList.add("name");
         nameDiv.textContent = user.name;
+        if (user.rankCF) {
+            nameDiv.style.color = rankToColor[user.rankCF];
+            nameDiv.style.fontWeight = "bold";
+        }
 
         const problemPointsDiv = document.createElement("div");
         problemPointsDiv.classList.add("problem-points");
